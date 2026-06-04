@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>WOS Gift Code Redeemer</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: #0f1117;
+      color: #e2e8f0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 32px 16px;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+
+    header h1 {
+      font-size: 1.9rem;
+      font-weight: 700;
+      color: #f8fafc;
+      letter-spacing: -0.5px;
+    }
+
+    header p {
+      margin-top: 6px;
+      color: #94a3b8;
+      font-size: 0.95rem;
+    }
+
+    .card {
+      background: #1e2130;
+      border: 1px solid #2d3148;
+      border-radius: 12px;
+      padding: 28px;
+      width: 100%;
+      max-width: 720px;
+    }
+
+    .card + .card { margin-top: 20px; }
+
+    label {
+      display: block;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #94a3b8;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 6px;
+    }
+
+    input[type="text"],
+    textarea,
+    select {
+      width: 100%;
+      background: #0f1117;
+      border: 1px solid #2d3148;
+      border-radius: 8px;
+      color: #e2e8f0;
+      padding: 10px 14px;
+      font-size: 0.95rem;
+      font-family: inherit;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+
+    input[type="text"]:focus,
+    textarea:focus,
+    select:focus {
+      border-color: #6366f1;
+    }
+
+    textarea {
+      resize: vertical;
+      min-height: 120px;
+      font-family: 'Courier New', monospace;
+      font-size: 0.85rem;
+    }
+
+    .row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-top: 16px;
+    }
+
+    .field { margin-top: 16px; }
+
+    .or-divider {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 12px;
+      color: #475569;
+      font-size: 0.8rem;
+    }
+    .or-divider::before, .or-divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: #2d3148;
+    }
+
+    .file-label {
+      display: inline-block;
+      margin-top: 8px;
+      padding: 8px 16px;
+      background: #1e2130;
+      border: 1px solid #2d3148;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      color: #94a3b8;
+      transition: border-color 0.15s, color 0.15s;
+    }
+    .file-label:hover { border-color: #6366f1; color: #e2e8f0; }
+    #csv_file { display: none; }
+    #file-chosen { margin-left: 8px; font-size: 0.85rem; color: #64748b; }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 22px;
+      padding: 11px 28px;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.15s, transform 0.1s;
+    }
+    .btn:active { transform: scale(0.97); }
+    .btn-primary { background: #6366f1; color: #fff; }
+    .btn-primary:hover { opacity: 0.88; }
+    .btn-primary:disabled { opacity: 0.45; cursor: not-allowed; }
+    .btn-stop { background: #dc2626; color: #fff; margin-left: 10px; display: none; }
+    .btn-stop:hover { opacity: 0.88; }
+
+    #output-card { display: none; }
+
+    #output-card h2 {
+      font-size: 1rem;
+      font-weight: 700;
+      color: #94a3b8;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 14px;
+    }
+
+    #console {
+      background: #0a0c12;
+      border: 1px solid #1e2130;
+      border-radius: 8px;
+      padding: 14px;
+      font-family: 'Courier New', monospace;
+      font-size: 0.82rem;
+      line-height: 1.6;
+      height: 420px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+
+    .log-info    { color: #38bdf8; }
+    .log-success { color: #4ade80; }
+    .log-error   { color: #f87171; }
+    .log-warn    { color: #fbbf24; }
+    .log-ocr     { color: #c084fc; }
+    .log-dim     { color: #475569; }
+    .log-default { color: #cbd5e1; }
+
+    .status-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 10px;
+      font-size: 0.85rem;
+      color: #64748b;
+    }
+
+    .dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: #334155;
+    }
+    .dot.running { background: #6366f1; animation: pulse 1.2s infinite; }
+    .dot.done    { background: #4ade80; }
+    .dot.error   { background: #f87171; }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+
+    select option { background: #1e2130; }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>⚔️ ZXC WOS Gift Code Redeemer</h1>
+  <p>Whiteout Survival · Automated redemption via ONNX CAPTCHA solver</p>
+</header>
+
+<div class="card">
+  <form id="redeem-form">
+    <div class="field">
+      <label for="code">Gift Code</label>
+      <input type="text" id="code" name="code" placeholder="e.g. WOSNEWYEAR" autocomplete="off" />
+    </div>
+
+    <div class="field">
+      <label for="fids">Player IDs</label>
+      <textarea id="fids" name="fids" placeholder="One ID per line, or comma-separated&#10;12345678&#10;87654321, 11112222"></textarea>
+    </div>
+
+    <div class="or-divider">or upload a CSV file</div>
+
+    <div style="margin-top:4px">
+      <label class="file-label" for="csv_file">📂 Choose CSV file</label>
+      <input type="file" id="csv_file" name="csv_file" accept=".csv,.txt" />
+      <span id="file-chosen">No file chosen</span>
+    </div>
+
+    <div class="row">
+      <div>
+        <label for="ocr_method">OCR Method</label>
+        <select id="ocr_method" name="ocr_method">
+          <option value="onnx">ONNX (default · ~98% accuracy)</option>
+        </select>
+      </div>
+      <div>
+        <label for="save_images">Save CAPTCHA Images</label>
+        <select id="save_images" name="save_images">
+          <option value="0">None (default)</option>
+          <option value="1">Failed only</option>
+          <option value="2">Successful only</option>
+          <option value="3">All</option>
+        </select>
+      </div>
+    </div>
+
+    <div>
+      <button type="submit" class="btn btn-primary" id="start-btn">▶ Start Redemption</button>
+      <button type="button" class="btn btn-stop" id="stop-btn">■ Stop</button>
+    </div>
+  </form>
+</div>
+
+<div class="card" id="output-card">
+  <h2>Live Output</h2>
+  <div id="console"></div>
+  <div class="status-bar">
+    <div class="dot" id="status-dot"></div>
+    <span id="status-text">Idle</span>
+  </div>
+</div>
+
+<script>
+  const form = document.getElementById('redeem-form');
+  const startBtn = document.getElementById('start-btn');
+  const stopBtn = document.getElementById('stop-btn');
+  const outputCard = document.getElementById('output-card');
+  const consoleEl = document.getElementById('console');
+  const statusDot = document.getElementById('status-dot');
+  const statusText = document.getElementById('status-text');
+  const fileInput = document.getElementById('csv_file');
+  const fileChosen = document.getElementById('file-chosen');
+
+  let eventSource = null;
+  let currentJobId = null;
+
+  fileInput.addEventListener('change', () => {
+    fileChosen.textContent = fileInput.files[0]?.name || 'No file chosen';
+    if (fileInput.files[0]) {
+      document.getElementById('fids').value = '';
+    }
+  });
+
+  function colorize(text) {
+    if (!text) return '';
+    const t = text.toLowerCase();
+    if (t.includes('successfully redeemed') || t.includes('success')) return 'log-success';
+    if (t.includes('error') || t.includes('critical') || t.includes('failed') || t.includes('exited')) return 'log-error';
+    if (t.includes('warning') || t.includes('warn') || t.includes('already redeemed') || t.includes('expired')) return 'log-warn';
+    if (t.includes('onnx result') || t.includes('ocr') || t.includes('captcha')) return 'log-ocr';
+    if (t.includes('===') || t.includes('---') || t.includes('processing')) return 'log-info';
+    if (t.includes('created') || t.includes('initialized') || t.includes('loaded')) return 'log-dim';
+    return 'log-default';
+  }
+
+  function appendLine(text, cls) {
+    const line = document.createElement('div');
+    line.className = cls || colorize(text);
+    line.textContent = text;
+    consoleEl.appendChild(line);
+    consoleEl.scrollTop = consoleEl.scrollHeight;
+  }
+
+  function setStatus(state, msg) {
+    statusDot.className = 'dot ' + state;
+    statusText.textContent = msg;
+  }
+
+  function finish() {
+    startBtn.disabled = false;
+    stopBtn.style.display = 'none';
+    if (eventSource) { eventSource.close(); eventSource = null; }
+  }
+
+  stopBtn.addEventListener('click', () => {
+    finish();
+    setStatus('error', 'Stopped by user');
+    appendLine('— Stopped by user —', 'log-warn');
+  });
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const fd = new FormData(form);
+
+    // Validate
+    if (!fd.get('code').trim()) { alert('Please enter a gift code.'); return; }
+    const hasFids = fd.get('fids').trim();
+    const hasCsv = fileInput.files.length > 0;
+    if (!hasFids && !hasCsv) { alert('Please enter player IDs or upload a CSV file.'); return; }
+
+    // Prepare UI
+    consoleEl.innerHTML = '';
+    outputCard.style.display = 'block';
+    startBtn.disabled = true;
+    stopBtn.style.display = 'inline-flex';
+    setStatus('running', 'Starting…');
+    outputCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+    // Start job
+    let resp;
+    try {
+      resp = await fetch('/start', { method: 'POST', body: fd });
+    } catch (err) {
+      appendLine('Network error: ' + err, 'log-error');
+      finish();
+      setStatus('error', 'Network error');
+      return;
+    }
+
+    const data = await resp.json();
+    if (!resp.ok || data.error) {
+      appendLine('Error: ' + (data.error || 'Unknown'), 'log-error');
+      finish();
+      setStatus('error', 'Error');
+      return;
+    }
+
+    currentJobId = data.job_id;
+    setStatus('running', 'Running…');
+
+    eventSource = new EventSource('/stream/' + currentJobId);
+
+    eventSource.onmessage = (ev) => {
+      const msg = JSON.parse(ev.data);
+      if (msg.type === 'ping') return;
+      if (msg.type === 'line') {
+        appendLine(msg.text);
+      } else if (msg.type === 'done') {
+        appendLine('✔ ' + msg.text, 'log-success');
+        setStatus('done', 'Completed');
+        finish();
+      } else if (msg.type === 'error') {
+        appendLine('✖ ' + msg.text, 'log-error');
+        setStatus('error', 'Failed');
+        finish();
+      }
+    };
+
+    eventSource.onerror = () => {
+      if (eventSource) {
+        appendLine('Connection closed.', 'log-dim');
+        setStatus('done', 'Finished');
+        finish();
+      }
+    };
+  });
+</script>
+</body>
+</html>
