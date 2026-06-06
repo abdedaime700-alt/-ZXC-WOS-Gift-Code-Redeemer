@@ -8,7 +8,7 @@ import tempfile
 import threading
 import queue
 import time
-from flask import Flask, render_template, request, Response, jsonify, stream_with_context
+from flask import Flask, render_template, request, Response, jsonify, stream_with_context, send_file
 
 app = Flask(__name__)
 
@@ -71,6 +71,30 @@ def run_redemption(job_id, code, fids_content, ocr_method, save_images):
 @app.route("/")
 def index():
     return render_template("index.html")
+
+
+@app.route("/download")
+def download():
+    import zipfile, io
+    exclude_dirs = {'.git', '.local', '.pythonlibs', '__pycache__', 'captcha_images', '.cache', '.upm'}
+    exclude_files = {'redeemed_codes.txt', 'zxc-wos-project.zip'}
+    fixed_date = (2024, 1, 1, 0, 0, 0)
+    base = os.path.dirname(os.path.abspath(__file__))
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, 'w', zipfile.ZIP_DEFLATED) as zf:
+        for root, dirs, files in os.walk(base):
+            dirs[:] = [d for d in dirs if d not in exclude_dirs]
+            for file in files:
+                if file in exclude_files or file.endswith('.pyc'):
+                    continue
+                filepath = os.path.join(root, file)
+                arcname = os.path.relpath(filepath, base)
+                info = zipfile.ZipInfo(arcname, date_time=fixed_date)
+                info.compress_type = zipfile.ZIP_DEFLATED
+                with open(filepath, 'rb') as f:
+                    zf.writestr(info, f.read())
+    buf.seek(0)
+    return send_file(buf, as_attachment=True, download_name='zxc-wos-project.zip', mimetype='application/zip')
 
 
 @app.route("/start", methods=["POST"])
